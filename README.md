@@ -13,7 +13,7 @@ alt="Shows lines with search results, the titles and the urls.">
 
 - Uses `html2text` to strip the markup out of the page.
 - Uses `beautifulsoup4` to parse the title.
-- Supports both Google (default) and Bing search, but is coded in a modular / search engine agnostic 
+- Supports Google (default), Bing and Aquila search, but is coded in a modular / search engine agnostic 
 way to allow very easily add new search engine support. Bing search requires a API subscription key, 
 which can be obtained for free at: https://www.microsoft.com/en-us/bing/apis/bing-entity-search-api
 
