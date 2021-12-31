@@ -14,8 +14,8 @@ alt="Shows lines with search results, the titles and the urls.">
 - Uses `html2text` to strip the markup out of the page.
 - Uses `beautifulsoup4` to parse the title.
 - Supports Google (default), Bing and Aquila search, but is coded in a modular / search engine agnostic 
-way to allow very easily add new search engine support. Bing search requires a API subscription key, 
-which can be obtained for free at: https://www.microsoft.com/en-us/bing/apis/bing-entity-search-api
+way to allow very easily add new search engine support. Both Bing and Aquila search requires a API subscription key, 
+which can be obtained for free at: https://www.microsoft.com/en-us/bing/apis/bing-entity-search-api & https://aquila.network
 
 
 Using the `googlesearch` module is very slow because it parses Google search webpages instead of querying cloud webservices. This is fine for playing with the model, but makes that searcher unusable for training or large scale inference purposes. In the paper, Bing cloud services are used, matching the results over Common Crawl instead of just downloading the page. Added `Aquila Search` to support searching on a limited collection of web pages like a collection of bookmarks.
