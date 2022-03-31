@@ -18,6 +18,9 @@ import parlai.agents.rag.retrieve_api
 import rich
 import rich.markup
 import requests
+from whoosh.qparser import QueryParser
+from whoosh.fields import Schema, TEXT, ID
+from whoosh import index
 
 print = rich.print
 
@@ -88,6 +91,80 @@ def _get_and_parse(url: str) -> Dict[str, str]:
     output_dict["content"] = html.unescape(text_maker.handle(page).strip())
 
     return output_dict
+
+class CustomDocumentHandler(http.server.BaseHTTPRequestHandler):
+    def do_POST(self):
+
+        """ Handle POST requests from the client. (All requests are POST) """
+
+        #######################################################################
+        # Prepare and Parse
+        #######################################################################
+        content_length = int(self.headers["Content-Length"])
+        post_data = self.rfile.read(content_length)
+
+        # Figure out the encoding
+        if "charset=" in self.headers["Content-Type"]:
+            charset = re.match(r".*charset=([\w_\-]+)\b.*", self.headers["Content-Type"]).group(1)
+        else:
+            detector = chardet.UniversalDetector()
+            detector.feed(post_data)
+            detector.close()
+            charset = detector.result["encoding"]
+
+        post_data = post_data.decode(charset)
+        parsed = urllib.parse.parse_qs(post_data)
+
+        for v in parsed.values():
+            assert len(v) == 1, len(v)
+        parsed = {k: v[0] for k, v in parsed.items()}
+
+        #######################################################################
+        # Search, get the pages and parse the content of the pages
+        #######################################################################
+        print(f"\n[bold]Received query:[/] {parsed}")
+
+        n = int(parsed["n"])
+        q = parsed["q"]
+
+
+        # create document index
+        ix = index.open_dir("indexdir")
+        content = []
+        with ix.searcher() as searcher:
+            query = QueryParser("content", ix.schema).parse(q)
+            results = searcher.search(query, terms=True)
+            for r in results:
+                s_article = {
+                    'title': r['title'],
+                    'content': r['content'],
+                    'url': ''
+                }
+                content.append(s_article)
+
+
+        ###############################################################
+        # Prepare the answer and send it
+        ###############################################################
+        content = content[:n]
+        output = json.dumps(dict(response=content)).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.send_header("Content-Length", len(output))
+        self.end_headers()
+        self.wfile.write(output)
+
+    def search(self, 
+            q: str, n: int, 
+            subscription_key: str = "", 
+            use_description_only: bool = False
+        ) -> Generator[str, None, None]:
+
+        return NotImplemented(
+            "Search is an abstract base class, not meant to be directly "
+            "instantiated. You should instantiate a derived class like "
+            "GoogleSearch."
+        )
 
 class SearchABCRequestHandler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
@@ -217,7 +294,8 @@ class SearchABCRequestHandler(http.server.BaseHTTPRequestHandler):
                 )
                 print(f" {_STYLE_SKIP}x{_CLOSE_STYLE_SKIP} Excluding an URL because `{_STYLE_SKIP}{reason_string}{_CLOSE_STYLE_SKIP}`:\n"
                       f"   {url}")
-
+        breakpoint()
+        print(content)
         ###############################################################
         # Prepare the answer and send it
         ###############################################################
@@ -352,7 +430,6 @@ class GoogleSearchRequestHandler(SearchABCRequestHandler):
             subscription_key: str = None,
             use_description_only: bool = False
         ) -> Generator[str, None, None]:
-
         return googlesearch.search(q, num=n, stop=None, pause=_DELAY_SEARCH)
 
 class AquilaSearchServer(SearchABCRequestHandler):
@@ -437,9 +514,11 @@ class Application:
         self.check_and_print_cmdline_args(max_text_bytes, strip_html_menus,
             search_engine, use_description_only, subscription_key)
 
-        if search_engine == "Bing":
+        if search_engine == "CustomDoc":
+            request_handler = CustomDocumentHandler
+        elif search_engine == "Bing":
             request_handler = BingSearchRequestHandler
-        if search_engine == "Aquila":
+        elif search_engine == "Aquila":
             request_handler = AquilaSearchServer
         else:
             request_handler = GoogleSearchRequestHandler
