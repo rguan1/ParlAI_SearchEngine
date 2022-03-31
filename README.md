@@ -106,7 +106,7 @@ python search_server.py serve --host 0.0.0.0:8080 --search_engine="CustomDoc"
 ```
 
 # Configuring Custom Document Search
-You need to set up and populate the Whoosh Index by running the cells 1-3 of whoosh_add_docs.ipynb. Then, you can use the custom document search.
+You need to set up and populate the Whoosh Index by running the cells 1-3 of `whoosh_add_docs.ipynb`. Then, you can use the custom document search.
 
 # Additional Command Line Example Test Calls
 
